@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking')
 const mongoose = require('mongoose')
 
-const getRevenuStats = async (req, res) => {
+const getRevenueStats = async (req, res) => {
     try {
         const { type } = req.query
 
@@ -63,4 +63,4 @@ const getRevenuStats = async (req, res) => {
     }
 }
 
-module.exports = getRevenuStats
+module.exports = getRevenueStats

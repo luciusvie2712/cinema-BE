@@ -19,10 +19,10 @@ app.get('/', (req, res) => {
     res.send("CinemaGo API is running ")
 })
 
-app.use('./api/accountUser', authRoutes)
-app.use('./api/moive', movieRoutes)
-app.use('./api/showtime', showtimeRoutes)
-app.use('./api/booking', bookingRoutes)
+app.use('/api/auth', authRoutes)
+app.use('/api/movie', movieRoutes)
+app.use('/api/showtime', showtimeRoutes)
+app.use('/api/booking', bookingRoutes)
 app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT

@@ -1,12 +1,14 @@
 const Movie = require('../models/Movie')
 const User = require('../models/User')
 
-const determineStatus = async (req, res) => {
+const determineStatus = (releaseDate, endDate) => {
     const today = Date.now()
+    releaseDate = new Date(releaseDate).getTime()
+    endDate = endDate ? new Date(endDate).getTime() : null
     if (releaseDate > today)  return 'coming'
     if (endDate && endDate < today) return 'ended'
     return 'showing'
-}
+}   
 
 const getAllMovies = async (req, res) => {
     try {
@@ -26,13 +28,13 @@ const getShowingMovies = async (req, res) => {
         const today = new Date()
         const movies = await Movie.find({
             releaseDate: {$lte: today}, 
-            $or: [{ endDate: {$gte: today} }, { endDate: {$exist: false} }]
+            $or: [{ endDate: {$gte: today} }, { endDate: {$exists: false} }]
         })
-        res.status(200).json(movies.map(movie => ({
+        return res.status(200).json(movies.map(movie => ({
             ...movie.toObject(), status: 'showing'
         })))
     } catch (error) {
-        res.status(500).json({ message: 'Loi may chu'})
+        return res.status(500).json({ message: 'Loi may chu'})
     }
 }
 
@@ -51,33 +53,49 @@ const getComingMovies = async (req, res) => {
 }
 
 const searchMovies = async (req, res) => {
-    const { q } = req.query
+    const { q, genre, status } = req.query;
+  
     try {
-        const movies = await Movie.find({
-            $or: [
-                {title: {$regex: q, $option: 'i'}},
-                {genre: {$regex: q, $option: 'i'}}
-            ]
-        })
-
-        const today = new Date()
-        const result = movies.map(movie => {
-            const status = determineStatus(movie.releaseDate, movie.endDate)
-            return { ...movie.toObject(), status}
-        })
-
-        res.status(200).json(result)
+      const query = {};
+      if (q) {
+        query.$or = [
+          { title: { $regex: q, $options: 'i' } },
+          { genres: { $elemMatch: { $regex: q, $options: 'i' } } }
+        ];
+      }
+      if (genre) {
+        query.genres = { $in: [genre] }; // genres là mảng nên dùng $in
+      }
+  
+      const movies = await Movie.find(query);
+  
+      const today = new Date();
+      const result = movies.map(movie => {
+        const statusResult = determineStatus(movie.releaseDate, movie.endDate);
+  
+        if (status && status !== statusResult) {
+          return null;
+        }
+        return { ...movie.toObject(), status: statusResult };
+      }).filter(movie => movie !== null);
+  
+      res.status(200).json(result);
     } catch (error) {
-        res.status(500).json({ message: 'Loi tim kiem'})
+      console.error(error);
+      res.status(500).json({ message: 'Lỗi tìm kiếm phim' });
     }
-}
+};
 
 const createMovie = async (req, res) => {
+    console.log(req.body)
     try {
         const {
             title, genre, description, posterUrl, bannerUrl, releaseDate, endDate
         } = req.body
-
+        const status = determineStatus(
+            new Date(releaseDate),
+            endDate ? new Date(endDate) : null
+        )
         const newMovie = new Movie({
             title, 
             genre,
@@ -89,9 +107,10 @@ const createMovie = async (req, res) => {
             status: determineStatus(new Date(releaseDate), endDate ? new Date(endDate) : null)
         })
         await newMovie.save()
-        res.status(201).json({ message: 'Them phim thanh cong', movie: newMovie })
+        return res.status(201).json({ message: 'Them phim thanh cong', movie: newMovie })
     } catch (error) {
-        res.status(500).json({ message: 'Loi them phim'})
+        console.log(error)
+        return res.status(500).json({ message: 'Loi them phim', error})
     }
 }
 
@@ -108,7 +127,7 @@ const updateMovie = async (req, res) => {
 
         movie.title = title || movie.title
         movie.genre = genre || movie.genre
-        movie.desciption = description || movie.desciption
+        movie.description = description || movie.description
         movie.posterUrl = posterUrl || movie.posterUrl
         movie.bannerUrl = bannerUrl || movie.bannerUrl
         movie.releaseDate = releaseDate ? new Date(releaseDate) : movie.releaseDate
@@ -116,19 +135,19 @@ const updateMovie = async (req, res) => {
         movie.status = determineStatus(releaseDate, endDate)
 
         await movie.save()
-        res.status(200).json({ message: "Cap nhat thanh cong", movie})
+        return res.status(200).json({ message: "Cap nhat thanh cong", movie})
     } catch (error) {
-        res.status(500).json({ message: 'Loi cap nhat phim'})
+        return res.status(500).json({ message: 'Loi cap nhat phim'})
     }
 }
 
 const deleteMovie = async (req, res) => {
     try {
         const { id } = req.params
-        const movie = await Movie.findOneAndDelete(id)
-        res.status(200).json({ message: 'Xoa phim thanh cong'})
+        const movie = await Movie.findByIdAndDelete(id)
+        return res.status(200).json({ message: 'Xoa phim thanh cong'})
     } catch (error) {
-        res.status(500).json({ messsage: 'Loi xoa phim'})
+        return res.status(500).json({ message: 'Loi xoa phim'})
     }
 }
 
@@ -161,5 +180,21 @@ const addComment = async (req, res) => {
         res.status(500).json({ message: 'Loi them danh gia'})
     }
 }
+const getMovieById = async (req, res) => {
+    try {
+      const movie = await Movie.findById(req.params.id)
+        .populate('comments.user', 'username avatar') // nếu mày muốn lấy thêm info user
+        .exec();
+  
+      if (!movie) {
+        return res.status(404).json({ message: 'Không tìm thấy phim' });
+      }
+  
+      res.status(200).json(movie);
+    } catch (error) {
+      console.error('Lỗi khi lấy phim:', error);
+      res.status(500).json({ message: 'Đã xảy ra lỗi server' });
+    }
+  };
 
-module.exports = { getAllMovies, getShowingMovies, getComingMovies, searchMovies, createMovie, updateMovie, deleteMovie, addComment }
+module.exports = { getAllMovies, getShowingMovies, getComingMovies, searchMovies, createMovie, updateMovie, deleteMovie, addComment, getMovieById }

@@ -1,9 +1,10 @@
 const User = require('../models/User')
 const bcrypt = require('bcryptjs')
+const salt = bcrypt.genSaltSync(10);
 const jwt = require('jsonwebtoken')
 
 const validatePassword = (password) => {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8.}$/
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
     return regex.test(password)
 }
 
@@ -11,14 +12,14 @@ const validatePassword = (password) => {
 const register = async (req, res) => {
     try {
         const { password, email, fullName, phone } = req.body
-        if (!validatePassword(passwrd))
-            return res.status(400).json({ message: "Mat khau phai co it nhat 8 ky tu, bao gom ky tu hoa, ky tu thuong vaf ky tu so"})
+        if (!validatePassword(password))
+            return res.status(400).json({ message: "Mat khau phai co it nhat 8 ky tu, bao gom ky tu hoa, ky tu thuong va ky tu so"})
 
         const userExist = await User.findOne({email})
         if (userExist)
             return res.status(400).json({ message: "Email da ton tai"})
 
-        const hashed = await bcrypt.hash(password, 10)
+        const hashed = await bcrypt.hashSync(password, salt)
 
         const newUser = new User({email, password: hashed, fullName, phone})
         await newUser.save()
@@ -35,23 +36,25 @@ const login = async (req, res) => {
         const { email, password } = req.body
 
         const user = await User.findOne({email})
-        if (!user) 
-            return res.status(400).json({ message: "Email hoac password khong chinh xac"})
+        if (!user) {
+            
+            return res.status(400).json({ message: "Email khong chinh xac"})
+        }
+        const isMatch = await bcrypt.compareSync(password, user.password)
+        if (isMatch === false)
+            return res.status(400).json({ message: "Password khong chinh xac"})
 
-        const isMatch = await bcrypt.compare(password, user.password)
-        if (!isMatch)
-            return res.status(400).json({ message: "Email hoac password khong chinh xac"})
-
-        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRECT, {
-            expiresIn: '1h'
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
+            expiresIn: '1d'
         })
 
         res.json({
             token, 
-            role: user.role
+            role: user.role,
+            fullName: user.fullName
         })
     } catch (error) {
-        res.status(500).json({ message: "Loi khong the dang nhap"})
+        res.status(500).json({ message: "Loi khong the dang nhap", error})
     }
 }
 
@@ -96,3 +99,17 @@ const resetPassword = async (req, res) => {
         res.status(500).json({ message: "Loi khong the thuc hien thay doi mat khau"})
     }
 }
+
+const getUserInfo = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');  // Không trả về mật khẩu
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi khi lấy thông tin người dùng' });
+    }
+};
+
+module.exports = {login, register, forgotPassword, resetPassword, getUserInfo }

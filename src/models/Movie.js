@@ -10,16 +10,15 @@ const commentSchema = new mongoose.Schema({
 
 const movieSchema = new mongoose.Schema({
     title: {type: String, required: true},
-    desciption: {type: String, required: true},
+    description: {type: String, required: true},
     genre: {type: [String] , required: true},
     posterUrl: {type: String, required: true},
     bannerUrl: {type: String, required: true},
     releaseDate: {type: Date, required: true},
     endDate: {type: Date, required: true},
-    duration: {type: Number, required: true},
-    status: {type: String, enum: ['comming', 'showing', 'ended'], required: true, default: 'comming'},
-    rating: {type: Number, required: true},
-    averageRating: {type: Number, default: 0},
+    duration: {type: Number},
+    status: {type: String, enum: ['coming', 'showing', 'ended'], default: 'coming'},
+    rating: {type: Number},
     showtimes: [{
         date: {type: Date, required: true},
         time: {type: String, required: true} 
