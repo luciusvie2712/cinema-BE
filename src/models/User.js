@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
     password: {type: String, required: true},
     role: {type: String, required: true, enum: ['admin', 'user'], default: 'admin'},
     bookedTickets: {type: mongoose.Schema.Types.ObjectId, ref:'Booking'},
+    resetCode: { type: String },
+    resetCodeExpires: { type: Date },
     createAt: {type: Date, default: Date.now}
 })
 

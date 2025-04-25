@@ -2,6 +2,7 @@ const User = require('../models/User')
 const bcrypt = require('bcryptjs')
 const salt = bcrypt.genSaltSync(10);
 const jwt = require('jsonwebtoken')
+const sendMail = require('../utils/sendMail')
 
 const validatePassword = (password) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
@@ -62,14 +63,14 @@ const login = async (req, res) => {
 const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body
-
+        console.log("Email cần gửi:", email)
         const user = await User.findOne({email})
         if (!user)
             return res.status(400).json({ message: "Khong tim thay email"})
 
         const code = Math.floor(100000 + Math.random() * 900000).toString()
         user.resetCode = code
-        user.resetCodeExpires = Date.now() + 10 * 600 * 1000
+        user.resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
         await user.save()
 
         await sendMail(email, 'Password Reset Code', `Your code is ${code}`)
@@ -79,6 +80,21 @@ const forgotPassword = async (req, res) => {
         res.status(500).json({ message: "Loi khong the gui ma xac thuc"})
     }
 }
+
+const verifyCode = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        const user = await User.findOne({ email });
+        console.log(user.resetCodeExpires)
+        if (!user || user.resetCode !== code || new Date() > user.resetCodeExpires)
+            return res.status(400).json({ message: "Mã xác thực không đúng hoặc đã hết hạn" });
+
+        res.json({ message: "Mã xác thực chính xác" });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi xác thực mã" });
+    }
+};
 
 //Thay doi mat khau
 const resetPassword = async (req, res) => {
@@ -112,4 +128,4 @@ const getUserInfo = async (req, res) => {
     }
 };
 
-module.exports = {login, register, forgotPassword, resetPassword, getUserInfo }
+module.exports = {login, register, forgotPassword, verifyCode, resetPassword, getUserInfo }

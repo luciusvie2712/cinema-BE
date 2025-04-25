@@ -2,13 +2,19 @@ const Movie = require('../models/Movie')
 const User = require('../models/User')
 
 const determineStatus = (releaseDate, endDate) => {
-    const today = Date.now()
-    releaseDate = new Date(releaseDate).getTime()
-    endDate = endDate ? new Date(endDate).getTime() : null
-    if (releaseDate > today)  return 'coming'
-    if (endDate && endDate < today) return 'ended'
-    return 'showing'
-}   
+    const today = Date.now();
+
+    const releaseTime = new Date(releaseDate).getTime();
+    const endTime = endDate ? new Date(endDate).getTime() : null;
+
+    if (isNaN(releaseTime)) throw new Error("Ngày phát hành không hợp lệ");
+    if (endTime && isNaN(endTime)) throw new Error("Ngày kết thúc không hợp lệ");
+
+    if (releaseTime > today) return 'coming';
+    if (endTime && endTime < today) return 'ended';
+    return 'showing';
+};
+
 
 const getAllMovies = async (req, res) => {
     try {
@@ -17,9 +23,9 @@ const getAllMovies = async (req, res) => {
             const status = determineStatus(movie.releaseDate, movie.endDate)
             return {...movie.toObject(), status}
         })
-        res.status(200).json(updateMovies)
+        return res.status(200).json(updateMovies)
     } catch (error) {
-        res.status(500).json({ message: 'Loi may chu'})
+        return res.status(500).json({ message: 'Loi may chu'})
     }
 }
 
@@ -48,7 +54,7 @@ const getComingMovies = async (req, res) => {
             ...movie.toObject(), status: 'coming'
         })))
     } catch (error) {
-        res.status(500).json({ message: 'Loi may chu'})
+        return res.status(500).json({ message: 'Loi may chu'})
     }
 }
 
@@ -79,40 +85,44 @@ const searchMovies = async (req, res) => {
         return { ...movie.toObject(), status: statusResult };
       }).filter(movie => movie !== null);
   
-      res.status(200).json(result);
+      return res.status(200).json(result);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Lỗi tìm kiếm phim' });
+      return res.status(500).json({ message: 'Lỗi tìm kiếm phim' });
     }
 };
 
 const createMovie = async (req, res) => {
-    console.log(req.body)
     try {
-        const {
-            title, genre, description, posterUrl, bannerUrl, releaseDate, endDate
-        } = req.body
-        const status = determineStatus(
-            new Date(releaseDate),
-            endDate ? new Date(endDate) : null
-        )
+        const { title, genre, description, posterUrl, bannerUrl, releaseDate, endDate } = req.body;
+
+        const parsedReleaseDate = new Date(releaseDate);
+        const parsedEndDate = endDate ? new Date(endDate) : null;
+
+        const status = determineStatus(parsedReleaseDate, parsedEndDate);
+
         const newMovie = new Movie({
-            title, 
+            title,
             genre,
             description,
             posterUrl,
             bannerUrl,
-            releaseDate,
-            endDate,
-            status: determineStatus(new Date(releaseDate), endDate ? new Date(endDate) : null)
-        })
-        await newMovie.save()
-        return res.status(201).json({ message: 'Them phim thanh cong', movie: newMovie })
+            releaseDate: parsedReleaseDate,
+            endDate: parsedEndDate,
+            status,
+        });
+
+        await newMovie.save();
+        return res.status(201).json({ message: 'Thêm phim thành công', movie: newMovie });
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ message: 'Loi them phim', error})
+        console.error('Lỗi thêm phim:', error.message);
+        if (!res.headersSent) {
+            return res.status(500).json({ message: 'Lỗi thêm phim', error: error.message });
+        }
     }
-}
+};
+
+
 
 const updateMovie = async (req, res) => {
     try {
@@ -137,7 +147,9 @@ const updateMovie = async (req, res) => {
         await movie.save()
         return res.status(200).json({ message: "Cap nhat thanh cong", movie})
     } catch (error) {
-        return res.status(500).json({ message: 'Loi cap nhat phim'})
+        if (!res.headersSent) {
+            return res.status(500).json({ message: 'Lỗi cập nhật phim', error: error.message });
+        }
     }
 }
 
@@ -145,6 +157,9 @@ const deleteMovie = async (req, res) => {
     try {
         const { id } = req.params
         const movie = await Movie.findByIdAndDelete(id)
+        if (!movie) {
+            return res.status(404).json({ message: 'Phim không tồn tại' });
+        }
         return res.status(200).json({ message: 'Xoa phim thanh cong'})
     } catch (error) {
         return res.status(500).json({ message: 'Loi xoa phim'})
@@ -175,9 +190,9 @@ const addComment = async (req, res) => {
         movie.avgRating = (movie.totalRating / movie.ratingCount).toFixed(1)
 
         await movie.save()
-        res.status(200).json({ message: 'Da them danh gia', movie})
+        return res.status(200).json({ message: 'Da them danh gia', movie})
     } catch (error) {
-        res.status(500).json({ message: 'Loi them danh gia'})
+        return res.status(500).json({ message: 'Loi them danh gia'})
     }
 }
 const getMovieById = async (req, res) => {
@@ -190,10 +205,10 @@ const getMovieById = async (req, res) => {
         return res.status(404).json({ message: 'Không tìm thấy phim' });
       }
   
-      res.status(200).json(movie);
+      return res.status(200).json(movie);
     } catch (error) {
       console.error('Lỗi khi lấy phim:', error);
-      res.status(500).json({ message: 'Đã xảy ra lỗi server' });
+      return res.status(500).json({ message: 'Đã xảy ra lỗi server' });
     }
   };
 

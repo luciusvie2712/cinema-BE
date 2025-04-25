@@ -4,9 +4,9 @@ const { createShowtime, getShowtimesMovie, updateShowtime, deleteShowtime, getAl
 const { protect } = require('../middlewares/authMiddleware')
 const adminMiddleware = require('../middlewares/adminMiddleware')
 
-router.post('/', protect, adminMiddleware, createShowtime)
-router.put('/:id', protect, adminMiddleware, updateShowtime)
-router.delete('/:id', protect, adminMiddleware, deleteShowtime)
+router.post('/', createShowtime)
+router.put('/:id', updateShowtime)
+router.delete('/:id', deleteShowtime)
 
 router.get('/', getAllShowtime)
 router.get('/:movieId', getShowtimesMovie)

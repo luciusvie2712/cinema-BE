@@ -7,6 +7,7 @@ const adminMiddleware = async (req, res, next) => {
 
         //Kiem tra nguoi dung co phai admin hay khong
         const user = await User.findById(req.user._id)
+        console.log("🛡️ Admin middleware chạy, req.user:", req.user)
         if (user.role !== 'admin') {
             return res.status(403).json({ message: 'Khong co quyen truy cap'})
         }

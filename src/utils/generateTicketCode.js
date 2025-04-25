@@ -1,9 +1,8 @@
 const crypto = require('crypto')
 
 const generateTicketCode = () => {
-    const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase()
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    return `MOVIE-${datePart}-${randomPart}`
+    const orderCode = Math.floor(Math.random() * 9_00) + 1_00;
+    return orderCode
 }
 
 module.exports = generateTicketCode

@@ -1,16 +1,17 @@
-const nodemailer = requeri('nodemailer')
+const nodemailer = require('nodemailer')
 
-const transporter = nodemailer.createTransport({
-    host: 'sandbox.smtp.mailtrap.io',
+var transport = nodemailer.createTransport({
+    host: "sandbox.smtp.mailtrap.io",
     port: 2525,
     auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_PASSWORD,
+      user: "d44aabe8ab9321",
+      pass: "7391d56ccc2625"
     }
-})
+});
 
 const sendMail = async (to, subject, text) => {
-    await transporter.sendMail({ from: 'cinema@example.com', to, subject, text })
+    console.log('Đang gửi đến:', to)
+    await transport.sendMail({ from: 'cinema@example.com', to, subject, text })
 }
 
 module.exports = sendMail

@@ -10,9 +10,9 @@ router.get('/coming', getComingMovies)
 router.get('/search', searchMovies)
 router.get('/:id', getMovieById)
 
-router.post('/admin-movie', protect, adminMiddleware, createMovie)
-router.put('/admin-movie/:id', protect, adminMiddleware, updateMovie)
-router.delete('/admin-movie/:id', protect, adminMiddleware, deleteMovie)
+router.post('/admin-movie',  createMovie)
+router.put('/admin-movie/:id',  updateMovie)
+router.delete('/admin-movie/:id',  deleteMovie)
 
 router.post('/:id/comments', protect, addComment)
 
